@@ -315,7 +315,9 @@ extension XCTestCase {
             try? FileManager.default.removeItem(at: sourceRoot)
         }
 
-        var arguments = ["-cf", archiveURL.path]
+        // Keep host metadata out of fixtures: macOS provenance can add binary PAX
+        // records that 7-Zip flags as malformed and refuses to update.
+        var arguments = ["--format=ustar", "-cf", archiveURL.path]
         for (index, entry) in entries.enumerated() {
             let entryRoot = sourceRoot.appendingPathComponent(String(index),
                                                               isDirectory: true)
