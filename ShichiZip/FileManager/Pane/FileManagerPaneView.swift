@@ -164,8 +164,8 @@ final class FileManagerPaneView: NSView {
 
     func setAddressBarHidden(_ hidden: Bool) {
         [upButton, locationIconView, pathField].forEach { $0.isHidden = hidden }
-        addressBarTopConstraint.isActive = !hidden
-        contentTopConstraint.isActive = hidden
+        NSLayoutConstraint.deactivate([addressBarTopConstraint, contentTopConstraint])
+        (hidden ? contentTopConstraint : addressBarTopConstraint).isActive = true
     }
 
     private func installLayout(addressBarIconSize: CGFloat) {
