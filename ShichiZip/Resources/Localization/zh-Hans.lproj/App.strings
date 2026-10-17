@@ -272,3 +272,5 @@
 
 "view.openRootFolder" = "打开根目录";
 "view.showHiddenFiles" = "显示隐藏文件";
+
+"app.view.showWindowSubtitle" = "使用小标题";
