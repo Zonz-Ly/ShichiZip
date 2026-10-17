@@ -261,3 +261,6 @@
 "shell.openArchive" = "Open Archive…";
 
 "view.showHiddenFiles" = "Show Hidden Files";
+
+"app.toolbar.path" = "Path";
+"app.view.showWindowSubtitle" = "Show Subtitle";
