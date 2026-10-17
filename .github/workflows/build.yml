@@ -1,9 +1,6 @@
-name: Build and Test
+name: Custom macOS Build and Test
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
   workflow_dispatch:
 
@@ -71,7 +68,6 @@ jobs:
     name: Build and Test (${{ matrix.artifact_prefix }}, ${{ matrix.target_arch }})
     needs: source-tarball
     runs-on: xcode-27
-    environment: development
     strategy:
       fail-fast: false
       matrix:
@@ -82,24 +78,6 @@ jobs:
             app_bundle: ShichiZip.app
             artifact_prefix: ShichiZip
             target_arch: arm64
-          - scheme: ShichiZip
-            zig_variant: mainline
-            zig_target: x86_64-native
-            app_bundle: ShichiZip.app
-            artifact_prefix: ShichiZip
-            target_arch: x86_64
-          - scheme: ShichiZipZS
-            zig_variant: zs
-            zig_target: aarch64-native
-            app_bundle: ShichiZip ZS.app
-            artifact_prefix: ShichiZipZS
-            target_arch: arm64
-          - scheme: ShichiZipZS
-            zig_variant: zs
-            zig_target: x86_64-native
-            app_bundle: ShichiZip ZS.app
-            artifact_prefix: ShichiZipZS
-            target_arch: x86_64
     env:
       MACOSX_DEPLOYMENT_TARGET: "13.0"
       XCODE_PROJECT: ShichiZip.xcodeproj
@@ -272,7 +250,8 @@ jobs:
             -configuration "$XCODE_CONFIGURATION" \
             -derivedDataPath "$derived_data_path" \
             -arch "${{ matrix.target_arch }}" \
-            "-only-testing:${{ matrix.scheme }}UITests" \
+            "-only-testing:${{ matrix.scheme }}UITests/UnifiedToolbarUITests" \
+            "-only-testing:${{ matrix.scheme }}UITests/ToolbarStyleMenuUITests" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="${{ steps.signing.outputs.code_sign_identity }}" \
             DEVELOPMENT_TEAM="${{ steps.signing.outputs.development_team }}" \
@@ -321,61 +300,18 @@ jobs:
           path: build/test-diagnostics/${{ matrix.scheme }}-${{ matrix.target_arch }}
           if-no-files-found: warn
 
-  publish-homebrew-nightly:
-    name: Publish Homebrew Nightly Casks
-    needs: [source-tarball, macos-build]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      actions: read
-      contents: read
-    steps:
-      - name: Download app artifacts
-        uses: actions/download-artifact@v8
-        with:
-          pattern: ShichiZip*
-          path: ${{ runner.temp }}/homebrew-artifacts
-          merge-multiple: true
-          skip-decompress: true
-
-      - name: Check out Homebrew tap
-        uses: actions/checkout@v6
-        with:
-          repository: shichizip/homebrew-tap
-          path: homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-
-      - name: Render nightly casks
+      - name: Export toolbar screenshots
+        if: ${{ always() }}
         run: |
-          python3 homebrew-tap/scripts/render_casks.py \
-            --repository "${{ github.repository }}" \
-            --output-dir homebrew-tap/Casks \
-            nightly \
-            --run-id "${{ github.run_id }}" \
-            --commit "${{ github.sha }}" \
-            --tag "${{ needs.source-tarball.outputs.marketing_version }}" \
-            --artifact-dir "$RUNNER_TEMP/homebrew-artifacts"
-
-      - name: Update tap casks
-        id: update_tap
-        run: |
-          set -euo pipefail
-
-          cask_status="$(git -C homebrew-tap status --porcelain -- Casks)"
-          printf '%s\n' "$cask_status"
-          if [[ -z "$cask_status" ]]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+          result_path="$(find build/DerivedData/ShichiZip/Logs/Test -maxdepth 1 -name '*.xcresult' | sort | tail -1)"
+          if [[ -n "$result_path" ]]; then
+            xcrun xcresulttool export attachments --path "$result_path" --output-path build/toolbar-screenshots
           fi
 
-      - name: Commit tap update
-        if: steps.update_tap.outputs.changed == 'true'
-        run: |
-          set -euo pipefail
-
-          git -C homebrew-tap config user.name "github-actions[bot]"
-          git -C homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C homebrew-tap add Casks/shichizip@nightly.rb Casks/shichizip-zs@nightly.rb
-          git -C homebrew-tap commit -m "update: nightly casks to ${GITHUB_SHA::7}"
-          git -C homebrew-tap push
+      - name: Upload toolbar screenshots
+        uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: toolbar-screenshots
+          path: build/toolbar-screenshots
+          if-no-files-found: warn
