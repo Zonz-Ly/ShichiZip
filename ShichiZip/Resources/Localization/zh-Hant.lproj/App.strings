@@ -272,3 +272,5 @@
 
 "view.showHiddenFiles" = "顯示隱藏檔";
 "view.upOneLevel" = "前往上一層";
+
+"app.view.showWindowSubtitle" = "使用小標題";
