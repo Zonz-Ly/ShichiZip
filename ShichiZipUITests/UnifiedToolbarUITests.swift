@@ -349,7 +349,7 @@ final class ToolbarStyleMenuUITests: ShichiZipUITestCase {
         expectation(for: NSPredicate(format: "exists == NO"), evaluatedWith: path)
         waitForExpectations(timeout: 5)
         XCTAssertFalse(window.title.contains(folder.path))
-        toggleToolbarMenuItem("Show Subtitle")
+        toggleToolbarMenuItem("Show Full Path")
         expectation(for: NSPredicate(format: "title CONTAINS %@", folder.path), evaluatedWith: window)
         waitForExpectations(timeout: 10)
         let screenshot = XCTAttachment(screenshot: window.screenshot())
@@ -360,7 +360,7 @@ final class ToolbarStyleMenuUITests: ShichiZipUITestCase {
         let parentPath = folder.deletingLastPathComponent().path
         expectation(for: NSPredicate(format: "title CONTAINS %@", parentPath), evaluatedWith: window)
         waitForExpectations(timeout: 10)
-        toggleToolbarMenuItem("Show Subtitle")
+        toggleToolbarMenuItem("Show Full Path")
         XCTAssertFalse(window.title.contains(parentPath))
     }
 
