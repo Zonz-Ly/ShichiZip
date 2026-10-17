@@ -261,3 +261,5 @@
 "shell.openArchive" = "Open Archive…";
 
 "view.showHiddenFiles" = "Show Hidden Files";
+
+"app.view.showWindowSubtitle" = "Show Subtitle";
