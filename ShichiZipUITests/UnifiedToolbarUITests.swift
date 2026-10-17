@@ -328,8 +328,14 @@ final class ToolbarStyleMenuUITests: ShichiZipUITestCase {
     func testWindowSubtitleTracksLocationAndCanBeDisabled() throws {
         let window = fileManagerWindow
         XCTAssertTrue(window.waitForExistence(timeout: 10))
-        if leftPanePathField.isHittable {
+        let originallyShowsAddressBar = leftPanePathField.isHittable
+        if originallyShowsAddressBar {
             toggleToolbarMenuItem("Unified Style")
+        }
+        defer {
+            if originallyShowsAddressBar {
+                toggleToolbarMenuItem("Unified Style")
+            }
         }
         let title = window.descendants(matching: .any).matching(identifier: "fileManager.locationTitle").firstMatch
         XCTAssertTrue(title.waitForExistence(timeout: 5))
