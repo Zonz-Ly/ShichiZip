@@ -356,12 +356,22 @@ final class FileManagerPathToolbar: NSObject, NSToolbarDelegate {
         originalToolbar = window.toolbar
         originalTitleVisibility = window.titleVisibility
         // AppKit allocates the available toolbar width and owns all item geometry.
-        field.widthAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
-        widthLimit = field.widthAnchor.constraint(lessThanOrEqualToConstant: window.frame.width)
+        let content = NSView()
+        field.translatesAutoresizingMaskIntoConstraints = false
+        field.setContentHuggingPriority(.fittingSizeCompression, for: .horizontal)
+        content.addSubview(field)
+        NSLayoutConstraint.activate([
+            field.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            field.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            field.topAnchor.constraint(equalTo: content.topAnchor),
+            field.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+            content.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
+        ])
+        widthLimit = content.widthAnchor.constraint(lessThanOrEqualToConstant: window.frame.width)
         widthLimit.isActive = true
-        item.view = field
+        item.view = content
         item.label = SZL10n.string("column.path")
-        // The text field supplies its own bezel and focus ring.
+        // Apply border handling to the container, preserving the field's native bezel and focus ring.
         item.isBordered = false
         super.init()
         toolbar.delegate = self
