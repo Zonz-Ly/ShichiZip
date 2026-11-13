@@ -22,18 +22,6 @@ final class FinderServiceInstaller {
         self.updateServices = updateServices
     }
 
-    func title(for action: ShichiZipQuickAction) -> String {
-        guard let template = try? templateURL(for: action),
-              let bundle = Bundle(url: template),
-              let services = bundle.object(forInfoDictionaryKey: "NSServices") as? [[String: Any]],
-              let menu = services.first?["NSMenuItem"] as? [String: String],
-              let title = menu["default"]
-        else {
-            return action.rawValue
-        }
-        return hostBundle.localizedString(forKey: title, value: title, table: "ServicesMenu")
-    }
-
     func isEnabled(_ action: ShichiZipQuickAction) -> Bool {
         guard let installed = try? installedURL(for: action),
               let data = try? Data(contentsOf: installed.appendingPathComponent("Contents/Info.plist")),

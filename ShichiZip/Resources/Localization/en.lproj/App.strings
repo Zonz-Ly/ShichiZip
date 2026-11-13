@@ -200,6 +200,10 @@
 "app.settings.fileTypes" = "File Types";
 "app.settings.finderLike" = "Finder-like";
 "app.settings.finderQuickActions" = "Finder Quick Actions";
+"app.settings.finderService.compress" = "%@: Compress";
+"app.settings.finderService.extract" = "%@: Smart Quick Extract";
+"app.settings.finderService.open" = "Open in %@";
+"app.settings.finderService.reveal" = "%@: Reveal in File Manager";
 "app.settings.finderServices" = "Finder Services";
 "app.settings.followSystem" = "Follow System";
 "app.settings.general" = "General";

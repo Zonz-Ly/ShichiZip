@@ -199,6 +199,10 @@
 "app.settings.fileTypes" = "檔案類型";
 "app.settings.finderLike" = "Finder 風格";
 "app.settings.finderQuickActions" = "Finder 快速動作";
+"app.settings.finderService.compress" = "%@: 壓縮";
+"app.settings.finderService.extract" = "%@: 快速解壓縮";
+"app.settings.finderService.open" = "在 %@ 中開啟";
+"app.settings.finderService.reveal" = "%@: 在檔案管理器中顯示";
 "app.settings.finderServices" = "Finder 服務";
 "app.settings.followSystem" = "跟隨系統";
 "app.settings.general" = "一般";

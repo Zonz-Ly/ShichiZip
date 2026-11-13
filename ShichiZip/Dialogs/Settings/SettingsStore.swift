@@ -247,7 +247,13 @@ final class SettingsStore {
     }
 
     func finderServiceTitle(_ action: ShichiZipQuickAction) -> String {
-        finderServices.title(for: action)
+        let key = switch action {
+        case .showInFileManager: "app.settings.finderService.reveal"
+        case .openInShichiZip: "app.settings.finderService.open"
+        case .compress: "app.settings.finderService.compress"
+        case .smartQuickExtract: "app.settings.finderService.extract"
+        }
+        return SZL10n.string(key, AppBuildInfo.appDisplayName())
     }
 
     func isFinderServiceEnabled(_ action: ShichiZipQuickAction) -> Bool {

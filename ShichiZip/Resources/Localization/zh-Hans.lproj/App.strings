@@ -200,6 +200,10 @@
 "app.settings.fileTypes" = "文件类型";
 "app.settings.finderLike" = "Finder 风格";
 "app.settings.finderQuickActions" = "访达快速操作";
+"app.settings.finderService.compress" = "%@: 压缩";
+"app.settings.finderService.extract" = "%@: 智能快速解压";
+"app.settings.finderService.open" = "在 %@ 中打开";
+"app.settings.finderService.reveal" = "%@: 在文件管理器中显示";
 "app.settings.finderServices" = "访达服务";
 "app.settings.followSystem" = "跟随系统";
 "app.settings.general" = "通用";

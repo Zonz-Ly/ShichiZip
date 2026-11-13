@@ -10,6 +10,25 @@ import XCTest
 
 @MainActor
 final class FinderServiceInstallerTests: XCTestCase {
+    func testServiceTitleFollowsAppLanguageOverride() throws {
+        let suite = "ShichiZip.ServiceLocalization.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer {
+            SZL10n.reloadBundle()
+            UserDefaults.standard.removePersistentDomain(forName: suite)
+        }
+        let store = SettingsStore(notificationCenter: NotificationCenter())
+        let appName = AppBuildInfo.appDisplayName()
+        for (locale, expected) in [("en", "Open in \(appName)"),
+                                   ("zh-Hans", "在 \(appName) 中打开"),
+                                   ("zh-Hant", "在 \(appName) 中開啟")]
+        {
+            defaults.set(locale, forKey: "LanguageOverride")
+            SZL10n.reloadBundle(defaults: defaults)
+            XCTAssertEqual(store.finderServiceTitle(.openInShichiZip), expected, locale)
+        }
+    }
+
     func testServicesStartOffAndCanBeInstalledIndependently() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

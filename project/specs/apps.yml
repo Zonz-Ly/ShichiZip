@@ -17,8 +17,6 @@ targets:
           - "QuickActions/**"
           - "FinderServices/**"
           - "QuickLookPreview/Extension/**"
-      - path: ../generated/services
-        buildPhase: resources
     dependencies:
       - sdk: AppIntents.framework
       - target: ShichiZipLocalization
