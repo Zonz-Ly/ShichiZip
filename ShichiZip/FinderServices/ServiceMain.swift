@@ -14,6 +14,5 @@ struct FinderServiceMain {
         }
         app.servicesProvider = provider
         app.run()
-        withExtendedLifetime(provider) {}
     }
 }

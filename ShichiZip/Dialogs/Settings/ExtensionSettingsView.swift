@@ -11,12 +11,7 @@ struct ExtensionSettingsView: View {
         SettingsPageView {
             VStack(spacing: 20) {
                 SettingsSectionView(SZL10n.string("app.settings.finderServices")) {
-                    SettingsNote(
-                        SZL10n.string(
-                            "app.settings.servicesDescription",
-                            AppBuildInfo.appDisplayName(),
-                        ),
-                    )
+                    SettingsNote(SZL10n.string("app.settings.servicesDescription"))
 
                     ForEach(FinderServiceInstaller.actions, id: \.rawValue) { action in
                         Toggle(store.finderServiceTitle(action), isOn: serviceBinding(for: action))

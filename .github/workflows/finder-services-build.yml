@@ -1,4 +1,4 @@
-name: Finder Services Full Build
+name: Finder Services and Native Toolbar (macOS 27)
 
 on:
   push:
@@ -14,7 +14,7 @@ env:
 
 jobs:
   build:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
@@ -23,6 +23,7 @@ jobs:
           fetch-depth: 0
       - name: Report build tools
         run: |
+          sw_vers
           xcodebuild -version
           xcrun swift --version
       - name: Generate project
@@ -53,6 +54,15 @@ jobs:
             -resultBundlePath build/FinderServicesTests.xcresult \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
             test 2>&1 | tee build/services-tests.log
+      - name: Check native path editor and capture all display modes
+        run: |
+          set -o pipefail
+          xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZip -configuration Debug \
+            -derivedDataPath build/DerivedData -arch arm64 \
+            -only-testing:ShichiZipUITests/UnifiedToolbarUITests \
+            -resultBundlePath build/NativeToolbarUITests.xcresult \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            test 2>&1 | tee build/toolbar-ui-tests.log
       - name: Verify signed packages and keyboard settings entry
         run: |
           app_path="build/DerivedData/Build/Products/Debug/ShichiZip.app"
@@ -79,4 +89,5 @@ jobs:
           path: |
             build/*.log
             build/FinderServicesTests.xcresult
+            build/NativeToolbarUITests.xcresult
           if-no-files-found: ignore

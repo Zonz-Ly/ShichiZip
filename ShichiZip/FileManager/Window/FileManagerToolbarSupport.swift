@@ -356,16 +356,13 @@ final class FileManagerPathToolbar: NSObject, NSToolbarDelegate {
         originalToolbar = window.toolbar
         originalTitleVisibility = window.titleVisibility
         // AppKit allocates the available toolbar width and owns all item geometry.
-        let content = NSStackView(views: [field])
-        content.orientation = .horizontal
-        content.distribution = .fill
-        content.edgeInsets = NSEdgeInsetsZero
-        content.widthAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
-        widthLimit = content.widthAnchor.constraint(lessThanOrEqualToConstant: window.frame.width)
+        field.widthAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        widthLimit = field.widthAnchor.constraint(lessThanOrEqualToConstant: window.frame.width)
         widthLimit.isActive = true
-        item.view = content
+        item.view = field
         item.label = SZL10n.string("column.path")
-        item.isBordered = true
+        // The text field supplies its own bezel and focus ring.
+        item.isBordered = false
         super.init()
         toolbar.delegate = self
         // Text-only mode must still show the editor. Modern toolbars keep their
