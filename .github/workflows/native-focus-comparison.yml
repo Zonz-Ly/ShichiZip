@@ -1,0 +1,30 @@
+name: Native Path Field Comparison (macOS 27)
+
+on:
+  push:
+    branches: [codex/native-focus-diagnostic]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: xcode-27
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Report exact source and tools
+        run: |
+          git rev-parse HEAD
+          shasum -a 256 ShichiZip/FileManager/Window/FileManagerToolbarSupport.swift
+          sw_vers
+          xcodebuild -version
+      - name: Build and capture native titlebar comparisons
+        run: python3 .github/scripts/run-native-focus-comparison.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Native-Path-Field-Comparison
+          path: build/native-focus-comparison/output
+          if-no-files-found: warn
