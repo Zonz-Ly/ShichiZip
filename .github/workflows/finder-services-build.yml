@@ -1,0 +1,82 @@
+name: Finder Services Full Build
+
+on:
+  push:
+    branches: [codex/finder-services]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Report build tools
+        run: |
+          xcodebuild -version
+          xcrun swift --version
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+      - name: Build archive engine and SFX
+        run: |
+          zig build lib -Dvariant=mainline -Dtarget=aarch64-native -Doptimize=ReleaseFast -p build --summary all
+          zig build sfx -Dvariant=mainline -Doptimize=ReleaseSmall -p build --summary all
+      - name: Build complete application
+        run: |
+          set -o pipefail
+          xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZip -configuration Debug \
+            -derivedDataPath build/DerivedData -arch arm64 \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            build 2>&1 | tee build/full-build.log
+      - name: Test services routing and installation
+        run: |
+          set -o pipefail
+          xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZip -configuration Debug \
+            -derivedDataPath build/DerivedData -arch arm64 \
+            -only-testing:ShichiZipTests/AppFileServicesTests \
+            -only-testing:ShichiZipTests/FinderServiceInstallerTests \
+            -resultBundlePath build/FinderServicesTests.xcresult \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            test 2>&1 | tee build/services-tests.log
+      - name: Verify signed packages and keyboard settings entry
+        run: |
+          app_path="build/DerivedData/Build/Products/Debug/ShichiZip.app"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          for service in "$app_path"/Contents/Resources/FinderServices/*.bundle; do
+            codesign --verify --deep --strict --verbose=2 "$service"
+          done
+          test "$(find "$app_path/Contents/Resources/FinderServices" -maxdepth 1 -name '*.bundle' | wc -l | tr -d ' ')" = 4
+          rg -q 'settings.openKeyboardSettings' ShichiZip/Dialogs/Settings/ExtensionSettingsView.swift
+      - name: Package complete application
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/DerivedData/Build/Products/Debug/ShichiZip.app \
+            build/ShichiZip-Finder-Services-arm64.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ShichiZip-Finder-Services-arm64
+          path: build/ShichiZip-Finder-Services-arm64.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Finder-Services-Build-Logs
+          path: |
+            build/*.log
+            build/FinderServicesTests.xcresult
+          if-no-files-found: ignore
