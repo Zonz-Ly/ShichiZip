@@ -272,7 +272,11 @@ final class FileManagerTitlePathField: NSTextField, NSTextFieldDelegate {
         self.init(string: path)
         lineBreakMode = .byTruncatingHead
         isAutomaticTextCompletionEnabled = false
-        controlSize = .large
+        if #available(macOS 26.0, *) {
+            controlSize = .extraLarge
+        } else {
+            controlSize = .large
+        }
         bezelStyle = .roundedBezel
         isBezeled = true
         delegate = self
@@ -356,22 +360,12 @@ final class FileManagerPathToolbar: NSObject, NSToolbarDelegate {
         originalToolbar = window.toolbar
         originalTitleVisibility = window.titleVisibility
         // AppKit allocates the available toolbar width and owns all item geometry.
-        let content = NSView()
-        field.translatesAutoresizingMaskIntoConstraints = false
-        field.setContentHuggingPriority(.fittingSizeCompression, for: .horizontal)
-        content.addSubview(field)
-        NSLayoutConstraint.activate([
-            field.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            field.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            field.topAnchor.constraint(equalTo: content.topAnchor),
-            field.bottomAnchor.constraint(equalTo: content.bottomAnchor),
-            content.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
-        ])
-        widthLimit = content.widthAnchor.constraint(lessThanOrEqualToConstant: window.frame.width)
+        field.widthAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        widthLimit = field.widthAnchor.constraint(lessThanOrEqualToConstant: window.frame.width)
         widthLimit.isActive = true
-        item.view = content
+        item.view = field
         item.label = SZL10n.string("column.path")
-        // Apply border handling to the container, preserving the field's native bezel and focus ring.
+        // The text field supplies its own bezel and focus ring.
         item.isBordered = false
         super.init()
         toolbar.delegate = self
