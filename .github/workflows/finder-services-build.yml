@@ -44,13 +44,14 @@ jobs:
             -derivedDataPath build/DerivedData -arch arm64 \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
             build 2>&1 | tee build/full-build.log
-      - name: Test services routing and installation
+      - name: Test services and native path editor state
         run: |
           set -o pipefail
           xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZip -configuration Debug \
             -derivedDataPath build/DerivedData -arch arm64 \
             -only-testing:ShichiZipTests/AppFileServicesTests \
             -only-testing:ShichiZipTests/FinderServiceInstallerTests \
+            -only-testing:ShichiZipTests/FileManagerTitlePathFieldTests \
             -resultBundlePath build/FinderServicesTests.xcresult \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
             test 2>&1 | tee build/services-tests.log
