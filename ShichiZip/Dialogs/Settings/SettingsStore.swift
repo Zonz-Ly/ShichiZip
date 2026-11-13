@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import ShichiZipQuickActionCore
 import SwiftUI
 
 enum FileManagerShortcutSettings {
@@ -44,6 +45,7 @@ enum FileManagerShortcutSettings {
 final class SettingsStore {
     private(set) var localizationVersion = 0
     private var settingsVersion = 0
+    private let finderServices = FinderServiceInstaller()
 
     private let notificationCenter: NotificationCenter
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
@@ -238,6 +240,29 @@ final class SettingsStore {
     func openFinderQuickActionsSettings() -> Bool {
         guard let url = URL(
             string: "x-apple.systempreferences:com.apple.ExtensionsPreferences?extensionPointIdentifier=com.apple.finder-quick-actions",
+        ) else {
+            return false
+        }
+        return NSWorkspace.shared.open(url)
+    }
+
+    func finderServiceTitle(_ action: ShichiZipQuickAction) -> String {
+        finderServices.title(for: action)
+    }
+
+    func isFinderServiceEnabled(_ action: ShichiZipQuickAction) -> Bool {
+        _ = settingsVersion
+        return finderServices.isEnabled(action)
+    }
+
+    func setFinderServiceEnabled(_ enabled: Bool, for action: ShichiZipQuickAction) throws {
+        try finderServices.setEnabled(enabled, for: action)
+        settingsVersion &+= 1
+    }
+
+    func openKeyboardSettings() -> Bool {
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension",
         ) else {
             return false
         }
