@@ -112,6 +112,8 @@ private final class ComparisonController: NSObject, NSToolbarDelegate {
     private var activeIdentifiers: [NSToolbarItem.Identifier] = []
     private var step = 0
     private var captureFailures = 0
+    private var validationFailures: [String] = []
+    private var previousEditorInsetAfterRelease = "none"
     private let texts = ["/Users/zonz", "/Users/zonz/Documents/資料/" + String(repeating: "Long-folder-漢字-", count: 12) + "archive.zip/nested"]
     private let modes: [(String, NSToolbar.DisplayMode)] = [("icon-and-text", .iconAndLabel), ("icon-only", .iconOnly)]
 
@@ -130,7 +132,7 @@ private final class ComparisonController: NSObject, NSToolbarDelegate {
 
         for (id, label) in [("a", "A System"), ("b", "B Cell 9pt"), ("c", "C Native 9pt")] {
             let reference = FileManagerTitlePathField(path: texts[0])
-            let field: NSTextField = id == "c" ? NativeInsetField(string: texts[0]) : reference
+            let field: NSTextField = id == "c" ? NativeInsetField(string: texts[0]) : FileManagerTitlePathField(path: texts[0])
             let originalFont = reference.font
             if id == "b" { field.cell = NinePointCell(textCell: texts[0]) }
             field.font = originalFont
@@ -207,7 +209,12 @@ private final class ComparisonController: NSObject, NSToolbarDelegate {
     private func advance() {
         guard step < phases.count else { finish(); return }
         let phase = phases[step]
+        let previousEditor = window.firstResponder as? NSTextView
         window.makeFirstResponder(nil)
+        previousEditorInsetAfterRelease = previousEditor.map { NSStringFromSize($0.textContainerInset) } ?? "none"
+        if let previousEditor, previousEditor.textContainerInset != .zero {
+            validationFailures.append("Phase \(step): shared editor retained inset \(previousEditor.textContainerInset)")
+        }
         if let toolbar {
             for index in toolbar.items.indices.reversed() { toolbar.removeItem(at: index) }
         }
@@ -263,6 +270,25 @@ private final class ComparisonController: NSObject, NSToolbarDelegate {
     }
 
     private func capture(_ phase: Phase) {
+        let visible = phase.layout == "combined" ? entries : entries.filter { $0.id == phase.layout }
+        for entry in visible {
+            if !entry.field.isEditable || !entry.field.isBezeled {
+                validationFailures.append("Phase \(step): \(entry.id) lost editable/native-bezel configuration")
+            }
+            if abs(entry.field.frame.height - entries[0].field.fittingSize.height) > 1 {
+                validationFailures.append("Phase \(step): \(entry.id) differs from native fitting height")
+            }
+        }
+        if let id = phase.focusID, let field = entries.first(where: { $0.id == id })?.field {
+            if field.currentEditor() == nil {
+                validationFailures.append("Phase \(step): \(id) did not receive a field editor")
+            } else {
+                let expected = phase.text + (phase.state == "edited" ? "-試験" : "")
+                if (field.currentEditor() as? NSTextView)?.string != expected {
+                    validationFailures.append("Phase \(step): \(id) editing changed unexpected text")
+                }
+            }
+        }
         let filename = String(format: "%02d", step) + "-\(phase.layout)-\(phase.modeName)-\(phase.text.count > 100 ? "long" : "short")-\(phase.state).png"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
@@ -274,6 +300,7 @@ private final class ComparisonController: NSObject, NSToolbarDelegate {
         } catch { captureFailures += 1; print(error) }
         records.append(["screenshot": filename, "displayMode": phase.modeName, "layout": phase.layout,
                         "state": phase.state, "focused": phase.focusID ?? "none", "isKeyWindow": window.isKeyWindow,
+                        "previousEditorInsetAfterRelease": previousEditorInsetAfterRelease,
                         "fields": entries.map { ["id": $0.id, "properties": fieldInfo($0.field)] }])
         print("Captured \(filename)")
         step += 1
@@ -283,11 +310,12 @@ private final class ComparisonController: NSObject, NSToolbarDelegate {
     private func finish() {
         do {
             let payload: [String: Any] = ["osVersion": ProcessInfo.processInfo.operatingSystemVersionString,
-                                         "captureFailures": captureFailures, "records": records]
+                                         "captureFailures": captureFailures, "validationFailures": validationFailures, "records": records]
             let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: output.appendingPathComponent("geometry-and-clipping.json"), options: .atomic)
             print("Completed \(records.count) comparisons; failures=\(captureFailures)")
-            exit(captureFailures == 0 ? 0 : 1)
+            for failure in validationFailures { print("Validation failure: \(failure)") }
+            exit(captureFailures == 0 && validationFailures.isEmpty ? 0 : 1)
         } catch { print(error); exit(2) }
     }
 }
