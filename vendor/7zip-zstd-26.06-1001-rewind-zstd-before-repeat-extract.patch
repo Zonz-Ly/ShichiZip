@@ -1,5 +1,5 @@
 diff --git a/CPP/7zip/Archive/ZstdHandler.cpp b/CPP/7zip/Archive/ZstdHandler.cpp
-index 522805a38a43fba4a39a7e688fe1569cdb2ed30d..7e58f05b7d69497291b82787e1ddc39a36724cdb 100644
+index cc6cd74161eb0f11b71d23b772714b1c2fdc10fd..cbbc477c1776ffc06c433586363a242afc7e7361 100644
 --- a/CPP/7zip/Archive/ZstdHandler.cpp
 +++ b/CPP/7zip/Archive/ZstdHandler.cpp
 @@ -31,6 +31,7 @@ Z7_CLASS_IMP_CHandler_IInArchive_3(
@@ -20,7 +20,7 @@ index 522805a38a43fba4a39a7e688fe1569cdb2ed30d..7e58f05b7d69497291b82787e1ddc39a
    _packSize_Defined = false;
 @@ -178,6 +180,15 @@ Z7_COM7F_IMF(CHandler::Extract(const UInt32 *indices, UInt32 numItems,
  
-   extractCallback->PrepareOperation(askMode);
+   RINOK(extractCallback->PrepareOperation(askMode));
  
 +  if (_needSeekToStart)
 +  {
