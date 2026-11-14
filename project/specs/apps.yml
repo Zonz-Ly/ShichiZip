@@ -74,6 +74,7 @@ targets:
           - "SHICHIZIP_ZS_VARIANT=0"
         SWIFT_ACTIVE_COMPILATION_CONDITIONS:
           - "$(inherited)"
+          - "SHICHIZIP_FOCUS_TRACE"
 
   ShichiZipTests:
     type: bundle.unit-test
@@ -202,4 +203,5 @@ targets:
           - "SHICHIZIP_ZS_VARIANT=1"
         SWIFT_ACTIVE_COMPILATION_CONDITIONS:
           - "$(inherited)"
+          - "SHICHIZIP_FOCUS_TRACE"
           - "SHICHIZIP_ZS_VARIANT"

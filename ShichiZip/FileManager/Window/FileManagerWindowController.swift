@@ -67,6 +67,9 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
         window.delegate = self
         setupUI()
         setupToolbar()
+        #if SHICHIZIP_FOCUS_TRACE
+            recordPathFocusTrace("window.initial-toolbar")
+        #endif
         observeViewPreferences()
         configureAutoRefreshTimer()
         trackedActivePane = leftPane
@@ -95,6 +98,9 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
         super.showWindow(sender)
         applyPendingEvenSplitLayoutIfNeeded()
         activePane.focusFileList()
+        #if SHICHIZIP_FOCUS_TRACE
+            recordPathFocusTrace("window.shown")
+        #endif
     }
 
     @discardableResult
@@ -267,6 +273,9 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
 
     private func expandTitlePath() {
         guard titlePathField == nil, let window else { return }
+        #if SHICHIZIP_FOCUS_TRACE
+            recordPathFocusTrace("path.request")
+        #endif
         let pane = activePane
         let field = FileManagerTitlePathField(path: pane.addressBarPath)
         let editor = FileManagerPathToolbar(window: window, field: field)
@@ -288,8 +297,30 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
         titlePathToolbar = editor
         editor.install()
         field.install()
+        #if SHICHIZIP_FOCUS_TRACE
+            recordPathFocusTrace("path.installed")
+        #endif
         field.beginPathEditing()
+        #if SHICHIZIP_FOCUS_TRACE
+            recordPathFocusTrace("path.focused")
+        #endif
     }
+
+    #if SHICHIZIP_FOCUS_TRACE
+        func recordPathFocusTrace(_ stage: String, event: NSEvent? = nil) {
+            if let event, titlePathField == nil,
+               event.type != .rightMouseDown,
+               !(event.type == .leftMouseDown && event.modifierFlags.contains(.control)) {
+                return
+            }
+            FileManagerFocusTrace.record(stage, window: window, field: titlePathField, event: event)
+        }
+
+        func exportPathFocusTraceAfterClick() {
+            guard titlePathField != nil else { return }
+            FileManagerFocusTrace.exportAfterInteraction()
+        }
+    #endif
 
     func handleTitlePathMouseEvent(_ event: NSEvent) -> Bool {
         guard FileManagerToolbarPreferences.style == .unified,

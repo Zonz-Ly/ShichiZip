@@ -5,6 +5,19 @@ final class FileManagerWindow: NSWindow {
     private weak var cachedTitleField: NSTextField?
 
     override func sendEvent(_ event: NSEvent) {
+        #if SHICHIZIP_FOCUS_TRACE
+            let traceMouse = [.leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp].contains(event.type)
+            let traceController = windowController as? FileManagerWindowController
+            if traceMouse { traceController?.recordPathFocusTrace("mouse.before", event: event) }
+            defer {
+                if traceMouse {
+                    traceController?.recordPathFocusTrace("mouse.after", event: event)
+                    if event.type == .leftMouseDown {
+                        traceController?.exportPathFocusTraceAfterClick()
+                    }
+                }
+            }
+        #endif
         if event.type == .leftMouseDown || event.type == .rightMouseDown,
            (windowController as? FileManagerWindowController)?.handleTitlePathMouseEvent(event) == true
         {
@@ -343,6 +356,9 @@ final class FileManagerTitlePathField: NSTextField, NSTextFieldDelegate {
     }
 
     override func textDidEndEditing(_ notification: Notification) {
+        #if SHICHIZIP_FOCUS_TRACE
+            FileManagerFocusTrace.record("field.didEndEditing", window: window, field: self)
+        #endif
         restoreEditorInsets()
         super.textDidEndEditing(notification)
         updateDisplayInsets()
