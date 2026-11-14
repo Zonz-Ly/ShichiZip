@@ -17,14 +17,23 @@ final class AppQuickActionHandler {
     }
 
     func handleLaunchURL(_ url: URL) {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.record("app.received-url", ["url": url])
+        #endif
         SZLog.info(Self.logPrefix, "received launchURL=\(url.absoluteString)")
         do {
             SZLog.info(Self.logPrefix, "consuming launchURL=\(url.absoluteString)")
             let request = try ShichiZipQuickActionTransport.consumeRequest(from: url)
+            #if SHICHIZIP_DIAGNOSTICS
+                SZServiceDiagnostics.record("app.decoded-request", ["action": request.action.rawValue, "count": request.paths.count])
+            #endif
             SZLog.info(Self.logPrefix, "decoded request action=\(request.action.rawValue) pathCount=\(request.paths.count)")
             NSApp.activate(ignoringOtherApps: true)
             try handle(request)
         } catch {
+            #if SHICHIZIP_DIAGNOSTICS
+                SZServiceDiagnostics.record("app.request-failed", ["error": String(describing: error)])
+            #endif
             SZLog.error(Self.logPrefix, "failed launchURL=\(url.absoluteString) error=\(String(describing: error))")
             szPresentError(error, for: NSApp.keyWindow ?? NSApp.mainWindow)
         }

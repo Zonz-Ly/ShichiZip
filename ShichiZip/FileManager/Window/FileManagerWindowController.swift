@@ -1,4 +1,7 @@
 import Cocoa
+#if SHICHIZIP_DIAGNOSTICS
+    import ShichiZipQuickActionCore
+#endif
 
 /// Dual-pane file manager window replicating 7-Zip File Manager
 @MainActor
@@ -181,6 +184,9 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
     }
 
     func windowWillClose(_: Notification) {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.toolbar("window.will-close", window: window)
+        #endif
         autoRefreshTimer?.invalidate()
         autoRefreshTimer = nil
         quickLookPanelController.closePreview()
@@ -313,6 +319,11 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
     }
 
     private func setupToolbar() {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.preferences("toolbar.setup-start", defaults: SZSharedUserDefaults.defaults,
+                                             groupIdentifier: SZSharedUserDefaults.appGroupIdentifier)
+            SZServiceDiagnostics.toolbar("toolbar.before-setup", window: window)
+        #endif
         titlePathField?.onFinish = nil
         titlePathField?.uninstall()
         titlePathField = nil
@@ -341,6 +352,9 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
             toolbar.autosavesConfiguration = unified
             toolbarDisplayModeObservation = toolbar.observe(\.displayMode, options: [.initial, .new]) { toolbar, _ in
                 MainActor.assumeIsolated {
+                    #if SHICHIZIP_DIAGNOSTICS
+                        SZServiceDiagnostics.record("toolbar.mode-observed", ["mode": toolbar.displayMode.rawValue])
+                    #endif
                     FileManagerToolbarPreferences.setShowsButtonText(toolbar.displayMode != .iconOnly)
                 }
             }
@@ -355,6 +369,9 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
         toolbarGroupVisibility = groups
         refreshToolbarItemPresentation()
         toolbar.validateVisibleItems()
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.toolbar("toolbar.after-setup", window: window)
+        #endif
     }
 
     private func updateToolbarGroup(_ identifiers: [NSToolbarItem.Identifier], wasVisible: Bool, isVisible: Bool) {

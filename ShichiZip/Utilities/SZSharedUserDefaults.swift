@@ -1,4 +1,7 @@
 import Foundation
+#if SHICHIZIP_DIAGNOSTICS
+    import ShichiZipQuickActionCore
+#endif
 
 enum SZSharedUserDefaults {
     static let appGroupIdentifierInfoKey = "ShichiZipQuickActionAppGroupIdentifier"
@@ -25,10 +28,19 @@ enum SZSharedUserDefaults {
             return nil
         }
 
-        return UserDefaults(suiteName: appGroupIdentifier)
+        let defaults = UserDefaults(suiteName: appGroupIdentifier)
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.record("preferences.shared-object-created", ["group": appGroupIdentifier,
+                                                                            "created": defaults != nil])
+        #endif
+        return defaults
     }()
 
     static func migrateStandardDefaultsIfNeeded() {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.record("preferences.migration-check", ["group": appGroupIdentifier ?? "missing",
+                "version": sharedDefaults?.integer(forKey: migrationVersionKey) ?? -1])
+        #endif
         guard let appGroupIdentifier,
               let sharedDefaults,
               let appDefaultsDomainName = Bundle.main.bundleIdentifier,
@@ -43,6 +55,10 @@ enum SZSharedUserDefaults {
                               destinationDomainName: appGroupIdentifier,
                               removesSourceDomain: true)
         sharedDefaults.set(currentMigrationVersion, forKey: migrationVersionKey)
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.preferences("preferences.migration-finished", defaults: sharedDefaults,
+                                             groupIdentifier: appGroupIdentifier)
+        #endif
     }
 
     @discardableResult
@@ -68,6 +84,10 @@ enum SZSharedUserDefaults {
         }
 
         if removesSourceDomain {
+            #if SHICHIZIP_DIAGNOSTICS
+                SZServiceDiagnostics.record("preferences.removing-source-domain", ["source": sourceDomainName,
+                    "destination": destinationDomainName, "migratedCount": migratedCount])
+            #endif
             source.removePersistentDomain(forName: sourceDomainName)
         }
 

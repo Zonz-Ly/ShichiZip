@@ -33,10 +33,29 @@ final class FinderServiceInstaller {
     func setEnabled(_ enabled: Bool, for action: ShichiZipQuickAction) throws {
         let destination = try installedURL(for: action)
         let exists = fileManager.fileExists(atPath: destination.path)
+        #if SHICHIZIP_DIAGNOSTICS
+            func packageInfo(_ url: URL) -> [String: Any] {
+                let bundle = Bundle(url: url)
+                let framework = Bundle(url: url.appendingPathComponent("Contents/Frameworks/ShichiZipQuickActionCore.framework"))
+                return ["path": url.path, "executable": bundle?.executableURL?.path ?? "missing",
+                        "coreCommit": framework?.object(forInfoDictionaryKey: "ShichiZipGitShortHash") ?? "missing"]
+            }
+            var diagnostic: [String: Any] = ["action": action.rawValue, "enabled": enabled,
+                                            "exists": exists, "installed": packageInfo(destination)]
+            if let source = try? templateURL(for: action) { diagnostic["source"] = packageInfo(source) }
+            diagnostic["runningPIDs"] = NSRunningApplication.runningApplications(withBundleIdentifier: serviceIdentifier(for: action))
+                .map { $0.processIdentifier }
+            SZServiceDiagnostics.record("installer.request", diagnostic)
+        #endif
         if exists, !isEnabled(action) {
             throw CocoaError(.fileWriteFileExists)
         }
-        guard enabled != exists else { return }
+        guard enabled != exists else {
+            #if SHICHIZIP_DIAGNOSTICS
+                SZServiceDiagnostics.record("installer.no-op", ["action": action.rawValue])
+            #endif
+            return
+        }
 
         if enabled {
             let source = try templateURL(for: action)
@@ -53,6 +72,9 @@ final class FinderServiceInstaller {
             try fileManager.removeItem(at: destination)
         }
         updateServices()
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.record("installer.dynamic-services-updated", ["action": action.rawValue, "enabled": enabled])
+        #endif
     }
 
     private func serviceIdentifier(for action: ShichiZipQuickAction) -> String {

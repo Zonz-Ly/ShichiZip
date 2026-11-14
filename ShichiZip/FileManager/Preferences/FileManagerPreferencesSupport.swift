@@ -1,4 +1,7 @@
 import AppKit
+#if SHICHIZIP_DIAGNOSTICS
+    import ShichiZipQuickActionCore
+#endif
 
 private var sharedDefaults: UserDefaults {
     SZSharedUserDefaults.defaults
@@ -162,18 +165,34 @@ enum FileManagerToolbarPreferences {
 
     static func setShowsArchiveToolbar(_ value: Bool) {
         sharedDefaults.set(value, forKey: archiveToolbarKey)
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.preferences("preferences.toolbar-write", defaults: sharedDefaults,
+                                             groupIdentifier: SZSharedUserDefaults.appGroupIdentifier)
+        #endif
     }
 
     static func setShowsStandardToolbar(_ value: Bool) {
         sharedDefaults.set(value, forKey: standardToolbarKey)
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.preferences("preferences.toolbar-write", defaults: sharedDefaults,
+                                             groupIdentifier: SZSharedUserDefaults.appGroupIdentifier)
+        #endif
     }
 
     static func setShowsButtonText(_ value: Bool) {
         sharedDefaults.set(value, forKey: showTextKey)
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.preferences("preferences.toolbar-write", defaults: sharedDefaults,
+                                             groupIdentifier: SZSharedUserDefaults.appGroupIdentifier)
+        #endif
     }
 
     static func setStyle(_ style: Style) {
         sharedDefaults.set(style.rawValue, forKey: styleKey)
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.preferences("preferences.toolbar-write", defaults: sharedDefaults,
+                                             groupIdentifier: SZSharedUserDefaults.appGroupIdentifier)
+        #endif
     }
 }
 

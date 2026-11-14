@@ -278,6 +278,9 @@ public enum ShichiZipQuickActionTransport {
     }
 
     private static func log(_ message: String) {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.record("transport", ["message": message])
+        #endif
         SZLog.info("QuickActionTransport", message)
     }
 }

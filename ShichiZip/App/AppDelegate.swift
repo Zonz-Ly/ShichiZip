@@ -40,6 +40,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
     )
 
     override init() {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.bootstrap("main-app")
+        #endif
         SZSettingsMigrations.preparePreferences()
         let fileManagerWindowRegistry = FileManagerWindowRegistry()
         self.fileManagerWindowRegistry = fileManagerWindowRegistry
@@ -63,6 +66,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.startDesktopExport()
+            SZServiceDiagnostics.preferences("app.did-finish-launching", defaults: SZSharedUserDefaults.defaults,
+                                             groupIdentifier: SZSharedUserDefaults.appGroupIdentifier)
+        #endif
         ShichiZipQuickActionTransport.cleanupStalePayloads()
         if #available(macOS 26.0, *) {
             lastWindowCloseTerminationDeferrer.startObservingClosingWindows()
@@ -99,6 +107,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
     }
 
     func applicationWillTerminate(_: Notification) {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.preferences("app.will-terminate", defaults: SZSharedUserDefaults.defaults,
+                                             groupIdentifier: SZSharedUserDefaults.appGroupIdentifier)
+            SZServiceDiagnostics.exportToDesktop()
+        #endif
         if #available(macOS 26.0, *) {
             lastWindowCloseTerminationDeferrer.stop()
         }
@@ -109,6 +122,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
     }
 
     func applicationShouldTerminate(_ application: NSApplication) -> NSApplication.TerminateReply {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.record("app.quit-requested", ["pending": applicationTerminationTask != nil])
+            SZServiceDiagnostics.preferences("preferences.before-quit", defaults: SZSharedUserDefaults.defaults,
+                                             groupIdentifier: SZSharedUserDefaults.appGroupIdentifier)
+        #endif
         guard applicationTerminationTask == nil else {
             return .terminateLater
         }
@@ -120,6 +138,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
             }
 
             let shouldTerminate = await fileManagerWindowRegistry.prepareForApplicationTermination()
+            #if SHICHIZIP_DIAGNOSTICS
+                SZServiceDiagnostics.record("app.quit-preparation-finished", ["accepted": shouldTerminate])
+            #endif
             applicationTerminationTask = nil
             application.reply(toApplicationShouldTerminate: shouldTerminate)
         }
@@ -137,6 +158,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
     }
 
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        #if SHICHIZIP_DIAGNOSTICS
+            SZServiceDiagnostics.record("app.reopen", ["hasVisibleWindows": flag])
+        #endif
         if !flag {
             showFileManager(nil)
         }
