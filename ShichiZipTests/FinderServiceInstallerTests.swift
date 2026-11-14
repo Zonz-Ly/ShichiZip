@@ -68,7 +68,7 @@ final class FinderServiceInstallerTests: XCTestCase {
             let service = try XCTUnwrap(Bundle(url: installed))
             let name = try XCTUnwrap(service.object(forInfoDictionaryKey: "CFBundleExecutable") as? String)
             let executable = try XCTUnwrap(service.executableURL)
-            XCTAssertEqual(executable, installed.appendingPathComponent("Contents/MacOS/\(name)"))
+            XCTAssertEqual(executable.path, installed.appendingPathComponent("Contents/MacOS/\(name)").path)
             XCTAssertTrue(FileManager.default.isExecutableFile(atPath: executable.path))
 
             let process = Process()
