@@ -1,4 +1,7 @@
 import AppKit
+#if SHICHIZIP_DIAGNOSTICS
+    import ShichiZipQuickActionCore
+#endif
 
 @MainActor
 final class FileManagerWindow: NSWindow {
@@ -360,9 +363,40 @@ final class FileManagerTitlePathField: NSTextField, NSTextFieldDelegate {
 
     func beginPathEditing() {
         guard !isFinished else { return }
-        selectText(nil)
+        #if SHICHIZIP_DIAGNOSTICS
+            recordFocus("path.focus-before")
+        #endif
+        if currentEditor() == nil {
+            guard window?.makeFirstResponder(self) == true else { return }
+        }
+        currentEditor()?.selectAll(nil)
         updateEditorInsets()
+        #if SHICHIZIP_DIAGNOSTICS
+            recordFocus("path.focus-after")
+            DispatchQueue.main.async { [weak self] in self?.recordFocus("path.focus-next-turn") }
+        #endif
     }
+
+    #if SHICHIZIP_DIAGNOSTICS
+        func recordFocus(_ event: String) {
+            func identity(_ object: AnyObject?) -> String {
+                guard let object else { return "nil" }
+                return "\(type(of: object)) \(ObjectIdentifier(object))"
+            }
+            let editor = currentEditor()
+            SZServiceDiagnostics.record(event, [
+                "windowNumber": window?.windowNumber ?? -1,
+                "keyWindow": window?.isKeyWindow ?? false,
+                "field": identity(self), "editor": identity(editor),
+                "firstResponder": identity(window?.firstResponder),
+                "editorIsFirstResponder": editor != nil && window?.firstResponder === editor,
+                "fieldFrame": NSStringFromRect(frame),
+                "editorFrame": editor.map { NSStringFromRect($0.frame) } ?? "nil",
+                "cellHighlighted": cell?.isHighlighted ?? false,
+                "finished": isFinished,
+            ])
+        }
+    #endif
 
     @objc private func sheetDidEnd(_: Notification) {
         // Let AppKit finish restoring the sheet's previous first responder first.

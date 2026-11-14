@@ -300,6 +300,12 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
     func handleTitlePathMouseEvent(_ event: NSEvent) -> Bool {
         guard FileManagerToolbarPreferences.style == .unified,
               let window = window as? FileManagerWindow, event.window === window else { return false }
+        #if SHICHIZIP_DIAGNOSTICS
+            if let field = titlePathField {
+                field.recordFocus("path.mouse-before-\(event.type.rawValue)")
+                DispatchQueue.main.async { [weak field] in field?.recordFocus("path.mouse-next-turn") }
+            }
+        #endif
         let rightClick = event.type == .rightMouseDown || event.modifierFlags.contains(.control)
         if rightClick, titlePathField == nil,
            [window.title, window.subtitle].contains(where: { text in
