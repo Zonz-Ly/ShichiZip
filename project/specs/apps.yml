@@ -100,6 +100,7 @@ targets:
           - "SHICHIZIP_ZS_VARIANT=0"
         SWIFT_ACTIVE_COMPILATION_CONDITIONS:
           - "$(inherited)"
+          - "SHICHIZIP_DIAGNOSTICS"
 
   ShichiZipTests:
     type: bundle.unit-test
@@ -253,4 +254,5 @@ targets:
           - "SHICHIZIP_ZS_VARIANT=1"
         SWIFT_ACTIVE_COMPILATION_CONDITIONS:
           - "$(inherited)"
+          - "SHICHIZIP_DIAGNOSTICS"
           - "SHICHIZIP_ZS_VARIANT"

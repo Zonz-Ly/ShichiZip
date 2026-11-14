@@ -45,7 +45,6 @@ jobs:
           set -o pipefail
           xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZip -configuration Debug \
             -derivedDataPath build/DerivedData -arch arm64 \
-            OTHER_SWIFT_FLAGS='$(inherited) -D SHICHIZIP_DIAGNOSTICS' \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
             build 2>&1 | tee build/diagnostic-logs/build.log
       - name: Record package metadata and signatures

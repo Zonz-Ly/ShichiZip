@@ -15,6 +15,9 @@ targetTemplates:
         PRODUCT_BUNDLE_IDENTIFIER: ${hostIdentifier}.FinderService.${action}
         PRODUCT_NAME: ${target_name}
         MACH_O_TYPE: mh_execute
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS:
+          - "$(inherited)"
+          - "SHICHIZIP_DIAGNOSTICS"
         GENERATE_INFOPLIST_FILE: false
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_ENTITLEMENTS: ShichiZip/Resources/ShichiZip.entitlements

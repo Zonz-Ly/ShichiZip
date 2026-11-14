@@ -24,6 +24,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ee.dawn.ShichiZip.QuickActionCore
         PRODUCT_NAME: ShichiZipQuickActionCore
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS:
+          - "$(inherited)"
+          - "SHICHIZIP_DIAGNOSTICS"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         GENERATE_INFOPLIST_FILE: true
         DEFINES_MODULE: true
