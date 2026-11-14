@@ -1,0 +1,72 @@
+name: Native Focus Comparison Build
+
+on:
+  push:
+    branches: [codex/path-focus-comparison]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Select matching SDK and record source
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
+          xcodebuild -version
+          sw_vers
+          mkdir -p build
+          git rev-parse HEAD | tee build/focus-source.txt
+          git diff --exit-code cedddeb HEAD -- ShichiZip ShichiZipTests ShichiZipUITests project
+      - name: Build standalone native comparison
+        run: |
+          set -o pipefail
+          app="build/ShichiZip Focus Comparison.app"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          python3 - <<'PY'
+          from pathlib import Path
+          import plistlib, subprocess
+          info = {
+              "CFBundleIdentifier": "local.Zonz.ShichiZip.FocusComparison",
+              "CFBundleExecutable": "FocusComparison",
+              "CFBundleName": "ShichiZip Focus Comparison",
+              "CFBundleDisplayName": "ShichiZip Focus Comparison",
+              "CFBundlePackageType": "APPL",
+              "CFBundleVersion": "1",
+              "CFBundleShortVersionString": "1.0",
+              "LSMinimumSystemVersion": "14.0",
+              "LSUIElement": True,
+              "NSHighResolutionCapable": True,
+              "ShichiZipGitShortHash": subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip(),
+          }
+          p = Path("build/ShichiZip Focus Comparison.app/Contents/Info.plist")
+          p.write_bytes(plistlib.dumps(info))
+          PY
+          xcrun swiftc -parse-as-library -swift-version 6 -strict-concurrency=complete \
+            -sdk "$(xcrun --sdk macosx --show-sdk-path)" -target arm64-apple-macos14.0 \
+            diagnostics/path-focus/FocusComparison.swift \
+            -o "$app/Contents/MacOS/FocusComparison" 2>&1 | tee build/focus-build.log
+          cp diagnostics/path-focus/README.md "$app/Contents/Resources/README.md"
+          codesign --force --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          ditto -c -k --sequesterRsrc --keepParent "$app" build/ShichiZip-Focus-Comparison-arm64.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ShichiZip-Focus-Comparison-arm64.zip
+          path: build/ShichiZip-Focus-Comparison-arm64.zip
+          archive: false
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Focus-Comparison-Build-Logs
+          path: |
+            build/focus-source.txt
+            build/focus-build.log
+          if-no-files-found: warn
