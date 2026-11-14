@@ -127,6 +127,54 @@ final class UnifiedToolbarUITests: ShichiZipUITestCase {
         setToolbar("Standard Toolbar", button: "Copy", visible: true)
     }
 
+    func testNativeCustomizationWithSettledDrag() throws {
+        let window = fileManagerWindow
+        XCTAssertTrue(window.waitForExistence(timeout: 10))
+        setToolbar("Archive Toolbar", button: "Add", visible: true)
+        setToolbar("Standard Toolbar", button: "Copy", visible: true)
+        window.buttons["Up One Level"].rightClick()
+        try clickCustomizeToolbarMenuItem()
+        let done = try customizationDoneButton()
+        saveScreenshot("customize")
+        let toolbar = window.toolbars.firstMatch
+        let copy = toolbar.buttons["Copy"]
+        let add = toolbar.buttons["Add"]
+        // Leave the glass group's boundary and allow AppKit's insertion preview to settle.
+        let destination = add.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0.5))
+            .withOffset(CGVector(dx: -12, dy: 0))
+        copy.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click(
+            forDuration: 0.5,
+            thenDragTo: destination,
+            withVelocity: .slow,
+            thenHoldForDuration: 0.5,
+        )
+        expectation(for: NSPredicate { _, _ in copy.frame.minX < add.frame.minX }, evaluatedWith: toolbar)
+        waitForExpectations(timeout: 5)
+        saveScreenshot("settled-reorder")
+        XCTAssertLessThan(copy.frame.minX, add.frame.minX)
+        let info = toolbar.buttons["Info"]
+        info.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click(
+            forDuration: 0.3,
+            thenDragTo: leftPaneTable.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
+        )
+        done.click()
+        XCTAssertFalse(info.exists)
+        openPathEditor()
+        XCTAssertTrue(window.textFields["fileManager.titlePathField"].waitForExistence(timeout: 5))
+        app.typeKey(.escape, modifierFlags: [])
+        waitForPathEditorToClose()
+        XCTAssertFalse(info.exists)
+        XCTAssertLessThan(copy.frame.minX, add.frame.minX)
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(fileManagerWindow.waitForExistence(timeout: 10))
+        XCTAssertFalse(fileManagerWindow.toolbars.firstMatch.buttons["Info"].exists)
+        XCTAssertLessThan(fileManagerWindow.toolbars.firstMatch.buttons["Copy"].frame.minX,
+                          fileManagerWindow.toolbars.firstMatch.buttons["Add"].frame.minX)
+        setToolbar("Standard Toolbar", button: "Copy", visible: false)
+        setToolbar("Standard Toolbar", button: "Copy", visible: true)
+    }
+
     func testCustomizationOpensFromToolbarWithoutClosingWindow() throws {
         let window = fileManagerWindow
         XCTAssertTrue(window.waitForExistence(timeout: 10))

@@ -1,0 +1,100 @@
+name: Toolbar Drag Comparison
+
+on:
+  push:
+    branches: [codex/toolbar-drag-diagnostic]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+jobs:
+  compare:
+    runs-on: xcode-27
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Record exact source and tools
+        run: |
+          mkdir -p build/toolbar-drag
+          git rev-parse HEAD | tee build/toolbar-drag/commit.txt
+          git diff f8857d9927ac201e444dc4f9044dda3e33915532 -- ShichiZip > build/toolbar-drag/production.diff
+          test ! -s build/toolbar-drag/production.diff
+          sw_vers
+          xcodebuild -version
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+      - name: Build archive core
+        run: |
+          sh vendor/apply_7zip_patches.sh vendor/7zip
+          sh vendor/apply_7zip_patches.sh vendor/7zip-zstd
+          zig build lib -Dvariant=zs -Dtarget=aarch64-native -Doptimize=ReleaseFast -p build --summary all
+          zig build sfx -Dvariant=zs -Doptimize=ReleaseSmall -p build --summary all
+      - name: Build application and UI tests once
+        run: |
+          set -o pipefail
+          xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZipZS -configuration Debug \
+            -derivedDataPath build/DerivedData -arch arm64 \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            build-for-testing 2>&1 | tee build/toolbar-drag/build.log
+      - name: Compare original and settled drags three times each
+        run: |
+          set -o pipefail
+          printf 'gesture\ttrial\tpassed\n' > build/toolbar-drag/results.tsv
+          for trial in 1 2 3; do
+            for gesture in original settled; do
+              # Isolate each trial from the previous trial's saved toolbar layout.
+              defaults delete ee.dawn.ShichiZipZS 'NSToolbar Configuration FileManagerUnifiedToolbar' || true
+              if [[ "$gesture" == original ]]; then
+                method=testNativeCustomizationCanReorderRemoveAndRestoreLayout
+              else
+                method=testNativeCustomizationWithSettledDrag
+              fi
+              result="build/toolbar-drag/${gesture}-${trial}"
+              if xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZipZS -configuration Debug \
+                -derivedDataPath build/DerivedData -arch arm64 \
+                "-only-testing:ShichiZipZSUITests/UnifiedToolbarUITests/$method" \
+                -resultBundlePath "$result.xcresult" \
+                CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+                test-without-building 2>&1 | tee "$result.log"; then
+                printf '%s\t%s\ttrue\n' "$gesture" "$trial" >> build/toolbar-drag/results.tsv
+              else
+                printf '%s\t%s\tfalse\n' "$gesture" "$trial" >> build/toolbar-drag/results.tsv
+              fi
+              xcrun xcresulttool export attachments --path "$result.xcresult" \
+                --output-path "$result-attachments" || true
+            done
+          done
+          cat build/toolbar-drag/results.tsv
+          python3 - <<'PY'
+          import csv
+          from pathlib import Path
+          rows = list(csv.DictReader(Path('build/toolbar-drag/results.tsv').open(), delimiter='\t'))
+          assert len(rows) == 6
+          for gesture in ['original', 'settled']:
+              group = [r for r in rows if r['gesture'] == gesture]
+              print(gesture, sum(r['passed'] == 'true' for r in group), '/', len(group))
+          assert all(r['passed'] == 'true' for r in rows if r['gesture'] == 'settled'), 'Settled gesture still fails; inspect artifacts.'
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Toolbar-Drag-Comparison
+          path: |
+            build/toolbar-drag/*.log
+            build/toolbar-drag/*.tsv
+            build/toolbar-drag/*.txt
+            build/toolbar-drag/*.diff
+            build/toolbar-drag/*-attachments
+          if-no-files-found: warn
