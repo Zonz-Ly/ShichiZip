@@ -26,6 +26,16 @@ final class FileManagerWindow: NSWindow {
         super.sendEvent(event)
     }
 
+    #if SHICHIZIP_FOCUS_TRACE
+        override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
+            let controller = windowController as? FileManagerWindowController
+            controller?.recordPathFocusTrace("responder.before", requestedResponder: responder)
+            let accepted = super.makeFirstResponder(responder)
+            controller?.recordPathFocusTrace("responder.after", requestedResponder: responder, result: accepted)
+            return accepted
+        }
+    #endif
+
     private func locationTitle() -> NSTextField? {
         guard FileManagerToolbarPreferences.style == .unified, titleVisibility == .visible,
               let title = titleField() else { return nil }
@@ -363,6 +373,22 @@ final class FileManagerTitlePathField: NSTextField, NSTextFieldDelegate {
         super.textDidEndEditing(notification)
         updateDisplayInsets()
     }
+
+    #if SHICHIZIP_FOCUS_TRACE
+        override func becomeFirstResponder() -> Bool {
+            FileManagerFocusTrace.record("field.become.before", window: window, field: self)
+            let accepted = super.becomeFirstResponder()
+            FileManagerFocusTrace.record("field.become.after", window: window, field: self, result: accepted)
+            return accepted
+        }
+
+        override func resignFirstResponder() -> Bool {
+            FileManagerFocusTrace.record("field.resign.before", window: window, field: self)
+            let accepted = super.resignFirstResponder()
+            FileManagerFocusTrace.record("field.resign.after", window: window, field: self, result: accepted)
+            return accepted
+        }
+    #endif
 
     func install() {
         NotificationCenter.default.addObserver(self, selector: #selector(sheetDidEnd(_:)),

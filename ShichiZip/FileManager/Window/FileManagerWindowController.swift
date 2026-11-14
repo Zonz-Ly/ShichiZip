@@ -307,13 +307,15 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
     }
 
     #if SHICHIZIP_FOCUS_TRACE
-        func recordPathFocusTrace(_ stage: String, event: NSEvent? = nil) {
+        func recordPathFocusTrace(_ stage: String, event: NSEvent? = nil,
+                                  requestedResponder: NSResponder? = nil, result: Bool? = nil) {
             if let event, titlePathField == nil,
                event.type != .rightMouseDown,
                !(event.type == .leftMouseDown && event.modifierFlags.contains(.control)) {
                 return
             }
-            FileManagerFocusTrace.record(stage, window: window, field: titlePathField, event: event)
+            FileManagerFocusTrace.record(stage, window: window, field: titlePathField, event: event,
+                                        requestedResponder: requestedResponder, result: result)
         }
 
         func exportPathFocusTraceAfterClick() {
