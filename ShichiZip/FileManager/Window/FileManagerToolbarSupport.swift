@@ -432,8 +432,12 @@ final class FileManagerPathToolbar: NSObject, NSToolbarDelegate {
         widthLimit.isActive = true
         item.view = field
         item.label = SZL10n.string("column.path")
-        // The text field supplies its own bezel and focus ring.
-        item.isBordered = false
+        // Modern toolbars supply the field's native background through the item border.
+        if #available(macOS 26.0, *) {
+            item.isBordered = true
+        } else {
+            item.isBordered = false
+        }
         super.init()
         toolbar.delegate = self
         // Text-only mode must still show the editor. Modern toolbars keep their
