@@ -1,0 +1,75 @@
+name: Upstream Settings Control Build
+
+on:
+  push:
+    branches: [codex/upstream-settings-control]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+jobs:
+  build:
+    name: Build ShichiZip (arm64)
+    runs-on: xcode-27
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: eab2fb91ec6417ed98202755310867394b3df389
+          submodules: recursive
+          fetch-depth: 0
+      - name: Record source and SDK
+        run: |
+          mkdir -p build/upstream-control-logs
+          git rev-parse HEAD | tee build/upstream-control-logs/source.txt
+          test "$(git rev-parse HEAD)" = "eab2fb91ec6417ed98202755310867394b3df389"
+          git diff --exit-code
+          sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
+          sw_vers
+          xcodebuild -version
+      - name: Generate project
+        run: |
+          sh vendor/apply_7zip_patches.sh vendor/7zip
+          sh vendor/apply_7zip_patches.sh vendor/7zip-zstd
+          brew install xcodegen
+          xcodegen generate
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0
+      - name: Build archive engine
+        run: |
+          zig build lib -Dvariant=mainline -Dtarget=aarch64-native -Doptimize=ReleaseFast -p build --summary all
+          zig build sfx -Dvariant=mainline -Doptimize=ReleaseSmall -p build --summary all
+      - name: Build complete application
+        run: |
+          set -o pipefail
+          xcodebuild -project ShichiZip.xcodeproj -scheme ShichiZip -configuration Debug \
+            -derivedDataPath build/DerivedData -arch arm64 \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= \
+            build 2>&1 | tee build/upstream-control-logs/build.log
+      - name: Verify package signature
+        run: |
+          app="build/DerivedData/Build/Products/Debug/ShichiZip.app"
+          codesign --verify --deep --strict "$app"
+          codesign -d --verbose=4 "$app" > build/upstream-control-logs/signing.txt 2>&1
+      - name: Package application
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/DerivedData/Build/Products/Debug/ShichiZip.app \
+            build/ShichiZip-Upstream-eab2fb9-arm64.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ShichiZip-Upstream-eab2fb9-arm64.zip
+          path: build/ShichiZip-Upstream-eab2fb9-arm64.zip
+          archive: false
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Upstream-Control-Build-Logs
+          path: build/upstream-control-logs
+          if-no-files-found: warn
