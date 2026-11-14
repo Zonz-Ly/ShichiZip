@@ -278,6 +278,9 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
         #endif
         let pane = activePane
         let field = FileManagerTitlePathField(path: pane.addressBarPath)
+        #if SHICHIZIP_FOCUS_TRACE
+            FileManagerFocusExperimentMenu.shared.prepareEditorIfRequested(window: window, field: field)
+        #endif
         let editor = FileManagerPathToolbar(window: window, field: field)
         field.onSubmit = { [weak pane] path in
             guard let pane else { return false }
@@ -299,6 +302,15 @@ class FileManagerWindowController: NSWindowController, NSWindowDelegate, NSUserI
         field.install()
         #if SHICHIZIP_FOCUS_TRACE
             recordPathFocusTrace("path.installed")
+            if FileManagerFocusExperimentMenu.shared.selected == .nextTurn {
+                recordPathFocusTrace("experiment.focus-queued")
+                DispatchQueue.main.async { [weak self, weak field] in
+                    guard let self, let field, titlePathField === field else { return }
+                    field.beginPathEditing()
+                    recordPathFocusTrace("path.focused")
+                }
+                return
+            }
         #endif
         field.beginPathEditing()
         #if SHICHIZIP_FOCUS_TRACE

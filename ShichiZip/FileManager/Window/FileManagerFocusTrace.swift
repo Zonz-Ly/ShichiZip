@@ -3,7 +3,7 @@ import AppKit
 import Foundation
 import QuartzCore
 
-/// Temporary full-app diagnostics. Buffers only; no fieldEditor lookup or disk IO during focus/click handling.
+/// Temporary full-app diagnostics. State snapshots buffer in memory; disk IO happens after interaction.
 @MainActor
 enum FileManagerFocusTrace {
     private static var events: [[String: Any]] = []
@@ -19,6 +19,7 @@ enum FileManagerFocusTrace {
         let editor = field?.currentEditor() as? NSTextView
         var row: [String: Any] = [
             "stage": stage, "uptime": ProcessInfo.processInfo.systemUptime,
+            "experiment": FileManagerFocusExperimentMenu.shared.selected.rawValue,
             "window": window?.windowNumber ?? -1,
             "appActive": NSApp.isActive, "keyWindow": window?.isKeyWindow ?? false,
             "mainWindow": window?.isMainWindow ?? false,
@@ -117,10 +118,10 @@ enum FileManagerFocusTrace {
                                                      attributes: [.posixPermissions: 0o700])
             let report: [String: Any] = [
                 "os": ProcessInfo.processInfo.operatingSystemVersionString,
-                "traceVersion": 2,
+                "traceVersion": 3,
                 "build": Bundle.main.object(forInfoDictionaryKey: "ShichiZipGitShortHash") ?? "unknown",
                 "pid": ProcessInfo.processInfo.processIdentifier,
-                "note": "Original full-app flow; no fieldEditor prewarming, no focus fix, no typed text logged.",
+                "note": "Full-app focus comparisons; selected diagnostic scenario only. No typed text logged.",
                 "events": events,
             ]
             let data = try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys, .prettyPrinted])
@@ -129,6 +130,68 @@ enum FileManagerFocusTrace {
         } catch {
             NSLog("[FullAppFocusTrace] Export failed: %@", String(describing: error))
         }
+    }
+}
+
+/// Chooses a diagnostic scenario without opening a launcher window or storing preferences.
+@MainActor
+final class FileManagerFocusExperimentMenu: NSObject {
+    enum Scenario: String, CaseIterable {
+        case current = "A"
+        case nextTurn = "B"
+        case prepareEditor = "C"
+
+        var title: String {
+            switch self {
+            case .current: "A：原有方式（基準）"
+            case .nextTurn: "B：下一輪主佇列才聚焦"
+            case .prepareEditor: "C：先取得系統共享編輯器"
+            }
+        }
+    }
+
+    static let shared = FileManagerFocusExperimentMenu()
+    private(set) var selected: Scenario = .current
+    private var choices: [NSMenuItem] = []
+
+    func install() {
+        guard let mainMenu = NSApp.mainMenu else { return }
+        let identifier = NSUserInterfaceItemIdentifier("ShichiZipFocusDiagnosticMenu")
+        guard !mainMenu.items.contains(where: { $0.identifier == identifier }) else { return }
+        let root = NSMenuItem(title: "焦點診斷", action: nil, keyEquivalent: "")
+        root.identifier = identifier
+        let menu = NSMenu(title: root.title)
+        menu.autoenablesItems = false
+        for scenario in Scenario.allCases {
+            let item = NSMenuItem(title: scenario.title, action: #selector(selectScenario(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = scenario.rawValue
+            item.state = scenario == selected ? .on : .off
+            menu.addItem(item)
+            choices.append(item)
+        }
+        menu.addItem(.separator())
+        let note = NSMenuItem(title: "每個情境請先 ⌘Q 退出、重開，再選擇", action: nil, keyEquivalent: "")
+        note.isEnabled = false
+        menu.addItem(note)
+        root.submenu = menu
+        mainMenu.addItem(root)
+    }
+
+    @objc private func selectScenario(_ sender: NSMenuItem) {
+        guard let value = sender.representedObject as? String,
+              let scenario = Scenario(rawValue: value) else { return }
+        selected = scenario
+        for item in choices {
+            item.state = item.representedObject as? String == scenario.rawValue ? .on : .off
+        }
+        FileManagerFocusTrace.record("experiment.selected", window: NSApp.keyWindow, field: nil)
+    }
+
+    func prepareEditorIfRequested(window: NSWindow, field: NSTextField) {
+        guard selected == .prepareEditor else { return }
+        let editor = window.fieldEditor(true, for: field)
+        FileManagerFocusTrace.record("experiment.editor-prepared.\(editor != nil)", window: window, field: field)
     }
 }
 #endif

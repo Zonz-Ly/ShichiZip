@@ -68,6 +68,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, FileManagerDocumentOpenRouti
             lastWindowCloseTerminationDeferrer.startObservingClosingWindows()
         }
         MainMenu.setup()
+        #if SHICHIZIP_FOCUS_TRACE
+            FileManagerFocusExperimentMenu.shared.install()
+        #endif
         var isDefaultLaunch = notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey] as? Bool ?? true
         SZLog.info("AppDelegate", "didFinishLaunching isDefaultLaunch=\(isDefaultLaunch)")
         #if DEBUG
