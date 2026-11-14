@@ -1,0 +1,28 @@
+name: Native Path Background Comparison
+
+on:
+  push:
+    branches: [codex/path-background-diagnostic]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: xcode-27
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - name: Report tools
+        run: |
+          sw_vers
+          xcodebuild -version
+      - name: Compare native background settings
+        run: python3 .github/scripts/run-path-background-comparison.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Native-Path-Background-Comparison
+          path: build/path-background-comparison
+          if-no-files-found: warn
