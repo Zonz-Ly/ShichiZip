@@ -360,10 +360,7 @@ final class FileManagerTitlePathField: NSTextField, NSTextFieldDelegate {
 
     func beginPathEditing() {
         guard !isFinished else { return }
-        if currentEditor() == nil {
-            guard window?.makeFirstResponder(self) == true else { return }
-        }
-        currentEditor()?.selectAll(nil)
+        selectText(nil)
         updateEditorInsets()
     }
 
